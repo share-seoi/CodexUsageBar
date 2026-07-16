@@ -2,9 +2,10 @@ import Foundation
 
 final class UsageMonitor {
     var onSnapshot: ((UsageSnapshot) -> Void)?
+    var onChecked: ((Date) -> Void)?
     var onStatus: ((String) -> Void)?
 
-    private let store: LocalUsageStore
+    private let loadSnapshot: () throws -> UsageSnapshot?
     private let pollInterval: TimeInterval
     private let queue = DispatchQueue(label: "local.mackim.CodexUsageBar.local-monitor")
     private var timer: DispatchSourceTimer?
@@ -13,7 +14,15 @@ final class UsageMonitor {
     private var lastSnapshot: UsageSnapshot?
 
     init(store: LocalUsageStore = LocalUsageStore(), pollInterval: TimeInterval = 20) {
-        self.store = store
+        self.loadSnapshot = { try store.latestSnapshot() }
+        self.pollInterval = pollInterval
+    }
+
+    init(
+        pollInterval: TimeInterval,
+        loadSnapshot: @escaping () throws -> UsageSnapshot?
+    ) {
+        self.loadSnapshot = loadSnapshot
         self.pollInterval = pollInterval
     }
 
@@ -60,11 +69,12 @@ final class UsageMonitor {
         defer { scanning = false }
 
         do {
-            if let snapshot = try store.latestSnapshot() {
+            if let snapshot = try loadSnapshot() {
                 if snapshot != lastSnapshot {
                     lastSnapshot = snapshot
                     onSnapshot?(snapshot)
                 }
+                onChecked?(Date())
                 onStatus?("로컬 기록 · 20초마다 확인")
             } else {
                 onStatus?("Codex 사용 기록 대기 중")

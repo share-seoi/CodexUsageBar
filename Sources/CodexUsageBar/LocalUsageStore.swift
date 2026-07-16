@@ -34,14 +34,19 @@ struct LocalUsageStore {
 
     func latestSnapshot() throws -> UsageSnapshot? {
         let paths = try recentRolloutPaths(limit: 12)
+        return newestSnapshot(in: paths)?.adjustedForCurrentTime()
+    }
 
+    func newestSnapshot(in paths: [String]) -> UsageSnapshot? {
+        var newest: UsageSnapshot?
         for path in paths {
             if let snapshot = try? latestSnapshot(in: URL(fileURLWithPath: path)) {
-                return snapshot.adjustedForCurrentTime()
+                if newest == nil || snapshot.fetchedAt > newest!.fetchedAt {
+                    newest = snapshot
+                }
             }
         }
-
-        return nil
+        return newest
     }
 
     private func recentRolloutPaths(limit: Int) throws -> [String] {

@@ -4,6 +4,7 @@ import ImageIO
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let monitor = UsageMonitor(pollInterval: 20)
+    private let liveFetcher = LiveUsageFetcher()
     private let lifecycle = CodexLifecycle()
     private let cacheKey = "lastUsageSnapshot"
 
@@ -15,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var updatedItem: NSMenuItem!
     private var connectionItem: NSMenuItem!
     private var lastSnapshot: UsageSnapshot?
+    private var lastCheckedAt: Date?
+    private var lastLiveCheckedAt: Date?
+    private var liveRefreshInProgress = false
     private var interfaceStarted = false
     private var startupTimeout: DispatchWorkItem?
 
@@ -58,15 +62,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         monitor.onSnapshot = { [weak self] snapshot in
             DispatchQueue.main.async {
-                self?.apply(snapshot)
+                self?.applyLocal(snapshot)
+            }
+        }
+        monitor.onChecked = { [weak self] checkedAt in
+            DispatchQueue.main.async {
+                self?.markChecked(at: checkedAt)
             }
         }
         monitor.onStatus = { [weak self] status in
             DispatchQueue.main.async {
-                self?.connectionItem.title = status
+                guard let self, !self.liveRefreshInProgress else { return }
+                self.connectionItem.title = status
             }
         }
         monitor.start()
+        refreshLive(isManual: false)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -80,8 +91,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         updateStatusIcon()
         if
-            let fetchedAt = lastSnapshot?.fetchedAt,
-            Date().timeIntervalSince(fetchedAt) > 25
+            let lastCheckedAt,
+            Date().timeIntervalSince(lastCheckedAt) > 25
         {
             monitor.requestRefresh()
         }
@@ -116,7 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(item)
         }
 
-        updatedItem = disabledItem("업데이트 대기 중")
+        updatedItem = disabledItem("확인 대기 중")
         menu.addItem(updatedItem)
 
         connectionItem = disabledItem("Codex 연결 중…")
@@ -150,6 +161,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return item
     }
 
+    private func applyLocal(_ snapshot: UsageSnapshot) {
+        if let lastLiveCheckedAt, snapshot.fetchedAt <= lastLiveCheckedAt {
+            return
+        }
+        apply(snapshot)
+    }
+
+    private func applyLive(_ snapshot: UsageSnapshot) {
+        lastLiveCheckedAt = snapshot.fetchedAt
+        apply(snapshot)
+    }
+
     private func apply(_ snapshot: UsageSnapshot) {
         guard snapshot != lastSnapshot else { return }
         lastSnapshot = snapshot
@@ -171,9 +194,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.title = detailTitle(for: window)
             item.isHidden = false
         }
-
-        updatedItem.title = "업데이트: \(Self.updateFormatter.string(from: snapshot.fetchedAt))"
         updateStatusIcon()
+    }
+
+    private func markChecked(at date: Date) {
+        lastCheckedAt = date
+        updatedItem?.title = "확인: \(Self.updateFormatter.string(from: date))"
     }
 
     private func planTitle(_ planType: String?) -> String {
@@ -201,7 +227,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         else {
             return
         }
-        apply(snapshot.adjustedForCurrentTime())
+        applyLocal(snapshot.adjustedForCurrentTime())
         connectionItem.title = "저장된 값 · Codex 연결 중…"
     }
 
@@ -211,8 +237,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func refreshNow() {
-        connectionItem.title = "지금 새로고침 중…"
-        monitor.requestRefresh()
+        refreshLive(isManual: true)
+    }
+
+    private func refreshLive(isManual: Bool) {
+        guard !liveRefreshInProgress else { return }
+        liveRefreshInProgress = true
+        connectionItem.title = isManual ? "실시간 계정 새로고침 중…" : "실시간 계정 확인 중…"
+
+        let started = liveFetcher.fetch { [weak self] result in
+            guard let self else { return }
+            self.liveRefreshInProgress = false
+
+            switch result {
+            case .success(let snapshot):
+                self.applyLive(snapshot)
+                self.markChecked(at: snapshot.fetchedAt)
+                self.connectionItem.title = "실시간 계정 확인 완료 · 로컬 20초 추적"
+            case .failure(let error):
+                self.connectionItem.title = "\(error.localizedDescription) · 로컬 추적 유지"
+            }
+        }
+
+        if !started {
+            liveRefreshInProgress = false
+            connectionItem.title = "실시간 계정 조회가 이미 진행 중"
+        }
     }
 
     @objc private func quit() {

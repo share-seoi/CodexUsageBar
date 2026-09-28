@@ -54,9 +54,29 @@ struct LocalUsageStore {
             throw LocalUsageStoreError.stateDatabaseNotFound
         }
 
+        do {
+            return try recentRolloutPaths(limit: limit, openPath: databaseURL.path, extraFlags: 0)
+        } catch {
+            // Codex가 DB 연결을 닫아 -wal/-shm 파일이 없으면 WAL DB를 읽기 전용으로 열 수 없다.
+            // 이때는 쓰는 쪽이 없으므로 immutable 모드로 한 번 더 읽는다.
+            let walPath = databaseURL.path + "-wal"
+            guard !fileManager.fileExists(atPath: walPath) else { throw error }
+            return try recentRolloutPaths(
+                limit: limit,
+                openPath: databaseURL.absoluteString + "?immutable=1",
+                extraFlags: SQLITE_OPEN_URI
+            )
+        }
+    }
+
+    private func recentRolloutPaths(
+        limit: Int,
+        openPath: String,
+        extraFlags: Int32
+    ) throws -> [String] {
         var database: OpaquePointer?
-        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
-        guard sqlite3_open_v2(databaseURL.path, &database, flags, nil) == SQLITE_OK,
+        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | extraFlags
+        guard sqlite3_open_v2(openPath, &database, flags, nil) == SQLITE_OK,
               let database else {
             sqlite3_close(database)
             throw LocalUsageStoreError.databaseOpenFailed

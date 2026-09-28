@@ -10,6 +10,7 @@ PLIST_NAME="local.mackim.CodexUsageBar.lifecycle.plist"
 SOURCE_PLIST="$ROOT_DIR/Resources/$PLIST_NAME"
 TARGET_PLIST="$LAUNCH_AGENTS_DIR/$PLIST_NAME"
 CODEX_SUPPORT_DIR="$HOME/Library/Application Support/Codex"
+CLAUDE_SUPPORT_DIR="$HOME/Library/Application Support/Claude"
 USER_ID="$(/usr/bin/id -u)"
 SERVICE_TARGET="gui/$USER_ID/local.mackim.CodexUsageBar.lifecycle"
 
@@ -25,6 +26,9 @@ mkdir -p "$INSTALL_DIR" "$LAUNCH_AGENTS_DIR"
     "$TARGET_PLIST"
 /usr/libexec/PlistBuddy \
     -c "Set :WatchPaths:1 $CODEX_SUPPORT_DIR" \
+    "$TARGET_PLIST"
+/usr/libexec/PlistBuddy \
+    -c "Set :WatchPaths:2 $CLAUDE_SUPPORT_DIR" \
     "$TARGET_PLIST"
 
 /bin/launchctl bootout "$SERVICE_TARGET" 2>/dev/null || true

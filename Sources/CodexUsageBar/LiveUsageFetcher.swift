@@ -26,7 +26,15 @@ enum LiveUsageError: LocalizedError {
     }
 }
 
-final class LiveUsageFetcher {
+protocol LiveUsageFetching: AnyObject {
+    @discardableResult
+    func fetch(
+        isManual: Bool,
+        completion: @escaping (Result<UsageSnapshot, Error>) -> Void
+    ) -> Bool
+}
+
+final class LiveUsageFetcher: LiveUsageFetching {
     private let queue = DispatchQueue(label: "local.mackim.CodexUsageBar.live-fetch")
     private let timeout: TimeInterval
     private var inFlight = false
@@ -37,6 +45,7 @@ final class LiveUsageFetcher {
 
     @discardableResult
     func fetch(
+        isManual: Bool = false,
         completion: @escaping (Result<UsageSnapshot, Error>) -> Void
     ) -> Bool {
         guard !inFlight else { return false }

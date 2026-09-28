@@ -14,6 +14,7 @@
     <array>
         <string>__CODEX_SINGLETON_LOCK__</string>
         <string>__CODEX_SUPPORT_DIR__</string>
+        <string>__CLAUDE_SUPPORT_DIR__</string>
     </array>
     <key>LimitLoadToSessionType</key>
     <string>Aqua</string>

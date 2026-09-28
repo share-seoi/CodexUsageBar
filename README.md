@@ -1,6 +1,28 @@
 # Codex Usage Bar
 
-macOS 메뉴 막대에서 Codex와 Claude 데스크톱 앱의 남은 사용량을 퍼센트로 보여주는 작은 AppKit 앱입니다.
+**Windows 작업표시줄 또는 macOS 메뉴 막대에서 Codex와 Claude의 남은 사용량을 보여주는 도구입니다.**
+
+## Windows: 다른 PC에 바로 설치
+
+Windows 10/11 x64에서 저장소를 받은 뒤 루트에서 실행합니다. 관리자 권한과 별도의 .NET SDK 설치는 필요하지 않습니다(.NET Framework 4.8 이상 필요).
+
+```powershell
+git clone https://github.com/rlaehrb1/CodexUsageBar.git
+cd CodexUsageBar
+powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
+```
+
+기본 설치 위치는 `%LOCALAPPDATA%\Programs\CodexUsageBar`입니다. 설치 스크립트가 소스 빌드, 파일 복사, 실행까지 처리합니다. Codex 또는 Claude 앱을 열고 작업표시줄의 배터리 위젯을 클릭하면 두 계정의 한도를 볼 수 있습니다.
+
+- **Claude:** 해당 PC의 로그인 토큰으로 20초마다 사용량 API 조회.
+- **Codex:** 20초마다 로컬 기록 확인, 시작·수동 새로고침 때 계정 API 조회.
+- 자동 시작도 원하면 설치 명령에 `-AutoStart`를 추가합니다. 기본 설치는 자동 시작 설정을 변경하지 않습니다.
+- 각 PC에서 Codex/Claude에 로그인해야 합니다. 계정 토큰은 저장소에 포함되지 않습니다. 비공개 저장소를 받으려면 접근 권한이 있는 GitHub 계정으로 로그인해야 합니다.
+- 에이전트에게 설치를 맡길 때는 **[AGENTS.md](AGENTS.md)**, 상세 사용법·진단은 **[Windows 안내](windows/README.md)**를 참고하세요.
+
+## macOS
+
+아래는 macOS AppKit 버전의 동작 및 설치 안내입니다.
 
 - 지금 앞에 있는 앱이 Codex면 Codex 사용량, Claude면 Claude 사용량을 표시합니다.
 - 다른 앱으로 전환하면 마지막으로 사용한 쪽(Codex 또는 Claude)을 계속 표시합니다.

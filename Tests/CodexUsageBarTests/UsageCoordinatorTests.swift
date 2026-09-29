@@ -113,6 +113,36 @@ final class UsageCoordinatorLivePollingTests: XCTestCase {
         XCTAssertTrue(statuses.last?.hasPrefix("Codex 계정 API · 마지막 조회 ") ?? false)
     }
 
+    func testClosedAppShowsCachedValueWithoutLookup() {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let cacheKey = UUID().uuidString
+        let writer = UsageCoordinator(
+            monitor: UsageMonitor(pollInterval: 3_600) { nil },
+            liveFetcher: nil,
+            defaults: defaults,
+            cacheKey: cacheKey
+        )
+        writer.applyLocal(snapshot(usedPercent: 30, fetchedAt: 100))
+
+        let fetcher = StubLiveFetcher(result: .success(snapshot(usedPercent: 10, fetchedAt: 200)))
+        let coordinator = UsageCoordinator(
+            monitor: UsageMonitor(pollInterval: 3_600) { nil },
+            liveFetcher: fetcher,
+            defaults: defaults,
+            cacheKey: cacheKey
+        )
+        var emitted: [UsageSnapshot] = []
+        var statuses: [String] = []
+        coordinator.onSnapshot = { emitted.append($0) }
+        coordinator.onConnectionStatus = { status, _ in statuses.append(status) }
+
+        coordinator.showCachedSnapshot(status: "앱 꺼짐 · 마지막 기록 표시")
+
+        XCTAssertEqual(emitted.map(\.overallRemainingPercent), [70])
+        XCTAssertEqual(statuses, ["앱 꺼짐 · 마지막 기록 표시"])
+        XCTAssertEqual(fetcher.calls, 0)
+    }
+
     private func snapshot(usedPercent: Int, fetchedAt: TimeInterval) -> UsageSnapshot {
         UsageSnapshot(
             windows: [

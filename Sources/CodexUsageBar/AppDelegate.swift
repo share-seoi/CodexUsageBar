@@ -32,9 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        lifecycle.onLaunched = { [weak self] _ in
+        lifecycle.onLaunched = { [weak self] provider in
             DispatchQueue.main.async {
                 self?.startInterfaceIfNeeded()
+                // 앱이 켜지면 그 앱의 조회를 시작하고 바로 한 번 실시간 조회한다.
+                self?.coordinators[provider]?.start()
             }
         }
         lifecycle.onActivated = { [weak self] provider in
@@ -42,9 +44,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.setActiveProvider(provider)
             }
         }
-        lifecycle.onTerminated = { [weak self] _ in
+        lifecycle.onTerminated = { [weak self] provider in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard let self else { return }
+                // Windows 버전처럼 꺼진 앱은 조회하지 않는다. 남아 있는 토큰으로 같은 값을 반복해 받지 않도록.
+                if !self.lifecycle.runningProviders.contains(provider) {
+                    self.coordinators[provider]?.stop()
+                    self.statusMenuController?.setConnectionStatus(
+                        "앱 종료됨 · 마지막 기록 표시", health: .degraded, for: provider
+                    )
+                }
                 guard self.lifecycle.isAnyProviderRunning else {
                     NSApp.terminate(nil)
                     return
@@ -90,11 +99,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusMenuController = menuController
 
         menuController.onRefresh = { [weak self] in
-            self?.coordinators.values.forEach { $0.refreshLive(isManual: true) }
+            self?.runningCoordinators.forEach { $0.refreshLive(isManual: true) }
         }
         menuController.onMenuOpened = { [weak self] in
-            self?.coordinators.values.forEach { $0.requestLocalRefreshIfStale() }
-            self?.coordinators[.claude]?.refreshLiveIfStale(maxAge: Self.claudeStaleAge)
+            guard let self else { return }
+            self.runningCoordinators.forEach { $0.requestLocalRefreshIfStale() }
+            if self.lifecycle.runningProviders.contains(.claude) {
+                self.coordinators[.claude]?.refreshLiveIfStale(maxAge: Self.claudeStaleAge)
+            }
         }
         menuController.onShowBothChanged = { [weak self] showBoth in
             guard let self else { return }
@@ -115,9 +127,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             coordinator.onConnectionStatus = { [weak menuController] status, health in
                 menuController?.setConnectionStatus(status, health: health, for: provider)
             }
-            coordinator.start()
         }
         updateClaudePolling(for: initialProvider)
+        let running = lifecycle.runningProviders
+        for (provider, coordinator) in coordinators {
+            if running.contains(provider) {
+                coordinator.start()
+            } else {
+                coordinator.showCachedSnapshot(status: "앱 꺼짐 · 마지막 기록 표시")
+            }
+        }
+    }
+
+    private var runningCoordinators: [UsageCoordinator] {
+        let running = lifecycle.runningProviders
+        return coordinators.filter { running.contains($0.key) }.map { $0.value }
     }
 
     private func setActiveProvider(_ provider: UsageProvider) {

@@ -181,15 +181,27 @@ final class UsageCoordinator {
         onChecked?(date)
     }
 
+    /// 앱이 꺼져 있어 조회를 시작하지 않을 때도 마지막으로 저장된 값은 보여준다.
+    func showCachedSnapshot(status: String) {
+        guard !started, let snapshot = cachedSnapshot() else { return }
+        applyLocal(snapshot)
+        onConnectionStatus?(status, .degraded)
+    }
+
     private func restoreCachedSnapshot() {
+        guard let snapshot = cachedSnapshot() else { return }
+        applyLocal(snapshot)
+        onConnectionStatus?("저장된 값 · \(sourceName) 연결 중…", .working)
+    }
+
+    private func cachedSnapshot() -> UsageSnapshot? {
         guard
             let data = defaults.data(forKey: cacheKey),
             let snapshot = try? JSONDecoder().decode(UsageSnapshot.self, from: data)
         else {
-            return
+            return nil
         }
-        applyLocal(snapshot.adjustedForCurrentTime())
-        onConnectionStatus?("저장된 값 · \(sourceName) 연결 중…", .working)
+        return snapshot.adjustedForCurrentTime()
     }
 
     private func save(_ snapshot: UsageSnapshot) {

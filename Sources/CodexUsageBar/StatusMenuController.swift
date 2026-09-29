@@ -7,9 +7,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     var onShowBothChanged: ((Bool) -> Void)?
     var onQuit: (() -> Void)?
 
+    // "둘 다 표시"도 두 번째 항목을 만들지 않고 이 항목 하나에 나란히 그린다.
+    // 새 항목은 맨 왼쪽에 붙어서 메뉴 막대가 꽉 차면 노치 뒤로 숨어 버린다.
     private let statusItem: NSStatusItem
-    // "둘 다 표시"일 때만 만드는 두 번째 항목. 나중에 만든 항목이 왼쪽에 붙으므로 여기에 Codex를 둔다.
-    private var secondaryItem: NSStatusItem?
     private let model: UsageBoardModel
     private let boardView: NSHostingView<UsageBoardView>
     private let showBothItem = NSMenuItem(
@@ -113,45 +113,73 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func updateStatusButton() {
+        guard let button = statusItem.button else { return }
         let shown = model.shownProviders
-        // 오른쪽(원래 항목)에 마지막 앱, 왼쪽(두 번째 항목)에 첫 번째 앱을 그린다.
-        show(shown[shown.count - 1], on: statusItem.button)
-        if shown.count > 1 {
-            let item = secondaryItem ?? makeSecondaryItem()
-            show(shown[0], on: item.button)
-        } else if let item = secondaryItem {
-            NSStatusBar.system.removeStatusItem(item)
-            secondaryItem = nil
+        guard shown.count > 1 else {
+            show(shown[0], on: button)
+            return
         }
+
+        // 아이콘을 글자 사이에 넣어 "[Codex] W 88%   [Claude] 5h 63% · W 88%"처럼 그린다.
+        let font = button.font ?? .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+        let title = NSMutableAttributedString()
+        for (index, provider) in shown.enumerated() {
+            if index > 0 {
+                title.append(NSAttributedString(string: "   ", attributes: [.font: font]))
+            }
+            if let icon = ProviderIconLoader.currentIcon(for: provider) {
+                title.append(Self.inlineIcon(icon, font: font))
+                title.append(NSAttributedString(string: " ", attributes: [.font: font]))
+            }
+            title.append(NSAttributedString(string: menuBarTitle(for: provider), attributes: [.font: font]))
+        }
+        button.image = nil
+        button.attributedTitle = title
+        button.toolTip = shown.map(toolTip(for:)).joined(separator: "\n")
     }
 
-    private func makeSecondaryItem() -> NSStatusItem {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        configureButton(item.button)
-        // NSMenu는 한 항목에만 붙일 수 있으므로, 눌리면 원래 항목의 메뉴를 연다.
-        item.button?.target = self
-        item.button?.action = #selector(openMenu)
-        secondaryItem = item
-        return item
-    }
-
-    private func show(_ provider: UsageProvider, on button: NSStatusBarButton?) {
-        guard let button else { return }
-        let name = provider.displayName
-        if let snapshot = model.state(for: provider).snapshot, !snapshot.windows.isEmpty {
-            button.title = snapshot.menuBarTitle
-            button.toolTip = "\(name) \(snapshot.menuBarToolTip)"
-        } else {
-            button.title = "--%"
-            button.toolTip = "\(name) 남은 사용량 확인 중"
-        }
+    private func show(_ provider: UsageProvider, on button: NSStatusBarButton) {
+        button.title = menuBarTitle(for: provider)
+        button.toolTip = toolTip(for: provider)
         if let image = ProviderIconLoader.currentIcon(for: provider) {
             button.image = image
         }
     }
 
-    @objc private func openMenu() {
-        statusItem.button?.performClick(nil)
+    private func menuBarTitle(for provider: UsageProvider) -> String {
+        guard let snapshot = model.state(for: provider).snapshot, !snapshot.windows.isEmpty else {
+            return "--%"
+        }
+        return snapshot.menuBarTitle
+    }
+
+    private func toolTip(for provider: UsageProvider) -> String {
+        let name = provider.displayName
+        guard let snapshot = model.state(for: provider).snapshot, !snapshot.windows.isEmpty else {
+            return "\(name) 남은 사용량 확인 중"
+        }
+        return "\(name) \(snapshot.menuBarToolTip)"
+    }
+
+    /// 글자 사이에 넣은 이미지는 템플릿이어도 자동으로 칠해지지 않으므로, 그릴 때 메뉴 막대 글자색을 입힌다.
+    private static func inlineIcon(_ icon: NSImage, font: NSFont) -> NSAttributedString {
+        let side: CGFloat = 16
+        let size = NSSize(width: side, height: side)
+        let image: NSImage
+        if icon.isTemplate {
+            image = NSImage(size: size, flipped: false) { rect in
+                icon.draw(in: rect)
+                NSColor.labelColor.set()
+                rect.fill(using: .sourceAtop)
+                return true
+            }
+        } else {
+            image = icon
+        }
+        let attachment = NSTextAttachment()
+        attachment.image = image
+        attachment.bounds = CGRect(x: 0, y: (font.capHeight - side) / 2, width: side, height: side)
+        return NSAttributedString(attachment: attachment)
     }
 
     @objc private func refreshNow() {

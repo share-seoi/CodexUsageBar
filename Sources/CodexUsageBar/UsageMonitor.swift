@@ -6,7 +6,7 @@ final class UsageMonitor {
     var onStatus: ((String, ConnectionHealth) -> Void)?
 
     private let loadSnapshot: () throws -> UsageSnapshot?
-    private let pollInterval: TimeInterval
+    private var pollInterval: TimeInterval
     private let sourceName: String
     private let queue = DispatchQueue(label: "local.mackim.CodexUsageBar.local-monitor")
     private var timer: DispatchSourceTimer?
@@ -47,6 +47,17 @@ final class UsageMonitor {
         }
     }
 
+    /// 확인 간격을 바꾼다. 실행 중이면 새 간격으로 타이머를 다시 건다.
+    func setPollInterval(_ interval: TimeInterval) {
+        queue.async { [weak self] in
+            guard let self, interval != self.pollInterval else { return }
+            self.pollInterval = interval
+            guard self.running else { return }
+            self.timer?.cancel()
+            self.installTimer()
+        }
+    }
+
     func requestRefresh() {
         queue.async { [weak self] in
             self?.scan()
@@ -67,6 +78,11 @@ final class UsageMonitor {
         timer.resume()
     }
 
+    static func describe(_ interval: TimeInterval) -> String {
+        let seconds = Int(interval.rounded())
+        return seconds % 60 == 0 ? "\(seconds / 60)분" : "\(seconds)초"
+    }
+
     private func scan() {
         guard running, !scanning else { return }
         scanning = true
@@ -79,7 +95,7 @@ final class UsageMonitor {
                     onSnapshot?(snapshot)
                 }
                 onChecked?(Date())
-                onStatus?("로컬 기록 · 20초마다 확인", .ok)
+                onStatus?("로컬 기록 · \(Self.describe(pollInterval))마다 확인", .ok)
             } else {
                 onStatus?("\(sourceName) 사용 기록 대기 중", .working)
             }

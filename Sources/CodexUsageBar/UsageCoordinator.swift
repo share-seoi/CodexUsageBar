@@ -20,20 +20,25 @@ final class UsageCoordinator {
     private var liveHealthy = false
     private var liveRefreshInProgress = false
     private var started = false
+    // 앱이 꺼져 있을 때: 로컬 기록만 느리게 확인하고 실시간 조회는 하지 않는다.
+    private var backgroundOnly = false
+    private let localPollInterval: TimeInterval
 
     // 설정된 경우에만 실시간 조회를 주기적으로 반복한다(Claude).
     private var livePollInterval: TimeInterval?
     private var liveTimer: Timer?
 
     init(
-        monitor: UsageMonitor = UsageMonitor(pollInterval: 20),
+        monitor: UsageMonitor? = nil,
+        localPollInterval: TimeInterval = 20,
         liveFetcher: LiveUsageFetching? = LiveUsageFetcher(),
         defaults: UserDefaults = .standard,
         cacheKey: String = "lastUsageSnapshot",
         sourceName: String = UsageProvider.codex.displayName,
         liveSuccessStatus: String = "Codex 계정 API"
     ) {
-        self.monitor = monitor
+        self.monitor = monitor ?? UsageMonitor(pollInterval: localPollInterval)
+        self.localPollInterval = localPollInterval
         self.liveFetcher = liveFetcher
         self.defaults = defaults
         self.cacheKey = cacheKey
@@ -42,7 +47,45 @@ final class UsageCoordinator {
     }
 
     func start() {
-        guard !started else { return }
+        if started {
+            guard backgroundOnly else { return }
+            // 꺼져 있던 앱이 켜졌다: 로컬 확인 간격을 되돌리고 실시간 조회를 재개한다.
+            backgroundOnly = false
+            monitor.setPollInterval(localPollInterval)
+            monitor.requestRefresh()
+            startLive()
+            return
+        }
+        startMonitor()
+        startLive()
+    }
+
+    /// 앱은 꺼져 있지만 다른 경로(예: Claude에서 부른 Codex CLI)로 쓰일 수 있을 때.
+    /// 프로세스나 네트워크 없이 로컬 기록만 interval마다 확인한다.
+    func startBackground(localInterval: TimeInterval) {
+        if started && !backgroundOnly {
+            liveTimer?.invalidate()
+            liveTimer = nil
+        }
+        backgroundOnly = true
+        // 실시간 값 대신 로컬 기록 상태("로컬 기록 · 1분마다 확인")가 보이게 한다.
+        liveHealthy = false
+        monitor.setPollInterval(localInterval)
+        if started {
+            monitor.requestRefresh()
+        } else {
+            startMonitor()
+        }
+    }
+
+    private func startLive() {
+        if liveFetcher != nil {
+            refreshLive(isManual: false)
+        }
+        scheduleLiveTimer()
+    }
+
+    private func startMonitor() {
         started = true
 
         monitor.onSnapshot = { [weak self] snapshot in
@@ -64,15 +107,12 @@ final class UsageCoordinator {
 
         restoreCachedSnapshot()
         monitor.start()
-        if liveFetcher != nil {
-            refreshLive(isManual: false)
-        }
-        scheduleLiveTimer()
     }
 
     func stop() {
         guard started else { return }
         started = false
+        backgroundOnly = false
         liveTimer?.invalidate()
         liveTimer = nil
         monitor.stop()
@@ -93,6 +133,7 @@ final class UsageCoordinator {
 
     /// 마지막 실시간 조회가 maxAge보다 오래됐으면 바로 한 번 더 조회한다(앱 전환·메뉴 열기용).
     func refreshLiveIfStale(maxAge: TimeInterval, now: Date = Date()) {
+        guard !backgroundOnly else { return }
         if let lastLiveAttemptAt, now.timeIntervalSince(lastLiveAttemptAt) < maxAge {
             return
         }
@@ -159,7 +200,7 @@ final class UsageCoordinator {
     private func scheduleLiveTimer() {
         liveTimer?.invalidate()
         liveTimer = nil
-        guard started, liveFetcher != nil, let livePollInterval else { return }
+        guard started, !backgroundOnly, liveFetcher != nil, let livePollInterval else { return }
 
         let timer = Timer(timeInterval: livePollInterval, repeats: true) { [weak self] _ in
             self?.refreshLive(isManual: false)

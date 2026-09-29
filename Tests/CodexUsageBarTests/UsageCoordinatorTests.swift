@@ -113,6 +113,30 @@ final class UsageCoordinatorLivePollingTests: XCTestCase {
         XCTAssertTrue(statuses.last?.hasPrefix("Codex 계정 API · 마지막 조회 ") ?? false)
     }
 
+    func testClosedCodexChecksLocalHistoryWithoutLiveLookupUntilAppStarts() {
+        let fetcher = StubLiveFetcher(result: .success(snapshot(usedPercent: 10, fetchedAt: 100)))
+        let coordinator = UsageCoordinator(
+            monitor: UsageMonitor(pollInterval: 3_600) { nil },
+            liveFetcher: fetcher,
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            cacheKey: UUID().uuidString
+        )
+
+        coordinator.startBackground(localInterval: 60)
+        coordinator.refreshLiveIfStale(maxAge: 60)
+        XCTAssertEqual(fetcher.calls, 0)
+
+        // 앱이 켜지면 실시간 조회를 바로 한 번 한다.
+        coordinator.start()
+        XCTAssertEqual(fetcher.calls, 1)
+
+        // 다시 꺼지면 실시간 조회는 멈춘다.
+        coordinator.startBackground(localInterval: 60)
+        coordinator.refreshLiveIfStale(maxAge: 0)
+        XCTAssertEqual(fetcher.calls, 1)
+        coordinator.stop()
+    }
+
     func testClosedAppShowsCachedValueWithoutLookup() {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
         let cacheKey = UUID().uuidString

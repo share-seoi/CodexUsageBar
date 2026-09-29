@@ -9,6 +9,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let claudeStaleAge: TimeInterval = 20
     // Codex는 주기 실시간 조회 없이 전환할 때 조회한다. 조회마다 프로세스를 띄우므로 1분에 한 번까지만.
     private static let codexSwitchRefreshAge: TimeInterval = 60
+    // Codex 앱이 꺼져 있어도 Claude에서 부른 Codex CLI 등이 로컬 기록을 남기므로 이 간격으로 확인한다.
+    // 두 앱이 모두 꺼지면 이 앱 자체가 종료되므로 그때는 확인하지 않는다.
+    private static let codexClosedLocalInterval: TimeInterval = 60
 
     private let coordinators: [UsageProvider: UsageCoordinator] = [
         .codex: UsageCoordinator(),
@@ -47,12 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lifecycle.onTerminated = { [weak self] provider in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard let self else { return }
-                // Windows 버전처럼 꺼진 앱은 조회하지 않는다. 남아 있는 토큰으로 같은 값을 반복해 받지 않도록.
                 if !self.lifecycle.runningProviders.contains(provider) {
-                    self.coordinators[provider]?.stop()
-                    self.statusMenuController?.setConnectionStatus(
-                        "앱 종료됨 · 마지막 기록 표시", health: .degraded, for: provider
-                    )
+                    self.pause(provider, status: "앱 종료됨 · 마지막 기록 표시")
                 }
                 guard self.lifecycle.isAnyProviderRunning else {
                     NSApp.terminate(nil)
@@ -103,7 +102,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuController.onMenuOpened = { [weak self] in
             guard let self else { return }
-            self.runningCoordinators.forEach { $0.requestLocalRefreshIfStale() }
+            // 로컬 기록 확인은 가볍고, 꺼진 Codex도 1분 확인 중이므로 모두 요청한다.
+            self.coordinators.values.forEach { $0.requestLocalRefreshIfStale() }
             if self.lifecycle.runningProviders.contains(.claude) {
                 self.coordinators[.claude]?.refreshLiveIfStale(maxAge: Self.claudeStaleAge)
             }
@@ -134,8 +134,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if running.contains(provider) {
                 coordinator.start()
             } else {
-                coordinator.showCachedSnapshot(status: "앱 꺼짐 · 마지막 기록 표시")
+                pause(provider, status: "앱 꺼짐 · 마지막 기록 표시")
             }
+        }
+    }
+
+    /// 꺼진 앱의 조회를 줄인다. Claude는 남은 토큰으로 같은 값을 반복해 받지 않도록 멈추고,
+    /// Codex는 실시간 조회만 멈추고 로컬 기록은 1분마다 계속 확인한다.
+    private func pause(_ provider: UsageProvider, status: String) {
+        guard let coordinator = coordinators[provider] else { return }
+        switch provider {
+        case .claude:
+            coordinator.stop()
+            coordinator.showCachedSnapshot(status: status)
+            statusMenuController?.setConnectionStatus(status, health: .degraded, for: provider)
+        case .codex:
+            coordinator.startBackground(localInterval: Self.codexClosedLocalInterval)
         }
     }
 

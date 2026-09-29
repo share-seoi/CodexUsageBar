@@ -17,7 +17,9 @@
   </picture>
 </p>
 
-## 설치 (Windows 10/11)
+## 설치
+
+### Windows 10/11
 
 PowerShell에서:
 
@@ -32,11 +34,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
 - 로그인할 때 자동으로 켜지게 하려면 명령 끝에 `-AutoStart`를 붙이거나, 위젯 상세 창의 **자동 시작** 버튼을 누르세요.
 - 설치 전에 코드를 확인하고 싶다면 `.\windows\test.ps1`을 먼저 실행하세요. 네트워크 없이 합성 데이터로 동작을 검사합니다.
 
+### macOS 13 이상
+
+터미널에서:
+
+```bash
+git clone https://github.com/share-seoi/CodexUsageBar.git
+cd CodexUsageBar
+./scripts/build-app.sh
+./scripts/install-lifecycle.sh
+```
+
+- Swift로 빌드하므로 Xcode 명령행 도구가 필요합니다. 없으면 `xcode-select --install`로 설치하세요.
+- `~/Applications/Codex Usage Bar.app`에 설치됩니다. Codex나 Claude 앱을 열면 자동으로 켜지고, 둘 다 닫으면 꺼집니다.
+- Mac에서는 작업표시줄 대신 **메뉴 막대**에 `5h 63% · W 88%`처럼 표시됩니다.
+- 처음 실행하면 macOS가 Claude 로그인 정보가 든 키체인 접근을 묻습니다. **항상 허용**을 누르면 다시 묻지 않습니다. 코드 서명, 진단 옵션 등 자세한 내용은 [macOS 안내](docs/macos.md)를 보세요.
+
 ## 사용법
 
 1. Codex 또는 Claude 데스크톱 앱에 평소처럼 로그인해 둡니다.
-2. 둘 중 하나를 열면 작업표시줄에 배터리가 나타납니다. 둘 다 닫으면 위젯도 숨습니다.
-3. 배터리를 누르면 상세 창이 열립니다: **새로고침**, **자동 시작** 켜기/끄기, **종료**.
+2. 둘 중 하나를 열면 작업표시줄(Mac은 메뉴 막대)에 사용량이 나타납니다. 둘 다 닫으면 위젯도 숨습니다.
+3. 배터리를 누르면 상세 창이 열립니다: **새로고침**, **자동 시작** 켜기/끄기, **종료**. Mac은 메뉴 막대 항목을 누르면 같은 내용이 메뉴로 나옵니다.
 
 남은 양이 적으면 배터리가 빨갛게 바뀝니다.
 
@@ -51,13 +69,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
 
 ## 제거
 
+**Windows**
+
 1. 자동 시작을 켰다면 위젯 상세 창에서 먼저 끕니다.
 2. 상세 창에서 **종료**를 누릅니다.
 3. `%LOCALAPPDATA%\Programs\CodexUsageBar`(프로그램)와 `%LOCALAPPDATA%\CodexUsageBar`(마지막 사용량 캐시) 폴더를 지웁니다.
 
-## macOS
+**macOS**
 
-메뉴 막대 버전도 있습니다. 빌드와 설치는 [macOS 안내](docs/macos.md)를 보세요.
+1. 저장소 폴더에서 `./scripts/uninstall-lifecycle.sh`를 실행해 자동 실행을 해제합니다.
+2. 메뉴에서 종료한 뒤 `~/Applications/Codex Usage Bar.app`을 지웁니다.
 
 ## 참고
 

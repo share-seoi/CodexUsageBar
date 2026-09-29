@@ -94,6 +94,25 @@ final class UsageCoordinatorLivePollingTests: XCTestCase {
         XCTAssertTrue(statuses.last?.hasSuffix("로컬 기록 사용") ?? false)
     }
 
+    func testSwitchRefreshWorksWithoutPollingAndSkipsWithinMaxAge() {
+        let fetcher = StubLiveFetcher(result: .success(snapshot(usedPercent: 10, fetchedAt: 100)))
+        let coordinator = UsageCoordinator(
+            monitor: UsageMonitor(pollInterval: 3_600) { nil },
+            liveFetcher: fetcher,
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            cacheKey: UUID().uuidString,
+            liveSuccessStatus: "Codex 계정 API"
+        )
+        var statuses: [String] = []
+        coordinator.onConnectionStatus = { status, _ in statuses.append(status) }
+
+        coordinator.refreshLiveIfStale(maxAge: 60)
+        coordinator.refreshLiveIfStale(maxAge: 60)
+
+        XCTAssertEqual(fetcher.calls, 1)
+        XCTAssertTrue(statuses.last?.hasPrefix("Codex 계정 API · 마지막 조회 ") ?? false)
+    }
+
     private func snapshot(usedPercent: Int, fetchedAt: TimeInterval) -> UsageSnapshot {
         UsageSnapshot(
             windows: [
@@ -112,6 +131,7 @@ final class UsageCoordinatorLivePollingTests: XCTestCase {
 
 private final class StubLiveFetcher: LiveUsageFetching {
     let result: Result<UsageSnapshot, Error>
+    private(set) var calls = 0
 
     init(result: Result<UsageSnapshot, Error>) {
         self.result = result
@@ -121,6 +141,7 @@ private final class StubLiveFetcher: LiveUsageFetching {
         isManual: Bool,
         completion: @escaping (Result<UsageSnapshot, Error>) -> Void
     ) -> Bool {
+        calls += 1
         completion(result)
         return true
     }

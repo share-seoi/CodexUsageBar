@@ -7,6 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let claudeActivePollInterval: TimeInterval = 60
     private static let claudeBackgroundPollInterval: TimeInterval = 180
     private static let claudeStaleAge: TimeInterval = 20
+    // Codex는 주기 실시간 조회 없이 전환할 때 조회한다. 조회마다 프로세스를 띄우므로 1분에 한 번까지만.
+    private static let codexSwitchRefreshAge: TimeInterval = 60
 
     private let coordinators: [UsageProvider: UsageCoordinator] = [
         .codex: UsageCoordinator(),
@@ -18,7 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             liveFetcher: ClaudeLiveUsageFetcher(),
             cacheKey: "lastClaudeUsageSnapshot",
             sourceName: UsageProvider.claude.displayName,
-            liveSuccessStatus: "실시간 계정 조회 · 자동 갱신 중"
+            liveSuccessStatus: "Claude 계정 API"
         )
     ]
     private let lifecycle = AppLifecycle()
@@ -126,6 +128,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateClaudePolling(for: provider)
         if provider == .claude {
             coordinators[.claude]?.refreshLiveIfStale(maxAge: Self.claudeStaleAge)
+        } else {
+            coordinators[.codex]?.refreshLiveIfStale(maxAge: Self.codexSwitchRefreshAge)
         }
     }
 

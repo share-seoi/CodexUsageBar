@@ -31,7 +31,7 @@ final class UsageCoordinator {
         defaults: UserDefaults = .standard,
         cacheKey: String = "lastUsageSnapshot",
         sourceName: String = UsageProvider.codex.displayName,
-        liveSuccessStatus: String = "실시간 계정 확인 완료 · 로컬 20초 추적"
+        liveSuccessStatus: String = "Codex 계정 API"
     ) {
         self.monitor = monitor
         self.liveFetcher = liveFetcher
@@ -91,9 +91,8 @@ final class UsageCoordinator {
         monitor.requestRefresh()
     }
 
-    /// 주기 조회를 쓰는 경우, 마지막 실시간 조회가 오래됐으면 바로 한 번 더 조회한다.
+    /// 마지막 실시간 조회가 maxAge보다 오래됐으면 바로 한 번 더 조회한다(앱 전환·메뉴 열기용).
     func refreshLiveIfStale(maxAge: TimeInterval, now: Date = Date()) {
-        guard livePollInterval != nil else { return }
         if let lastLiveAttemptAt, now.timeIntervalSince(lastLiveAttemptAt) < maxAge {
             return
         }
@@ -124,7 +123,8 @@ final class UsageCoordinator {
                 self.liveHealthy = true
                 self.applyLive(snapshot)
                 self.markChecked(at: snapshot.fetchedAt)
-                self.onConnectionStatus?(self.liveSuccessStatus, .ok)
+                // 다음 조회까지 이 문구가 남으므로 언제 조회했는지 함께 보여준다.
+                self.onConnectionStatus?("\(self.liveSuccessStatus) · 마지막 조회 \(UsageFormat.time(Date()))", .ok)
             case .failure(let error):
                 self.liveHealthy = false
                 self.onConnectionStatus?("\(error.localizedDescription) · 로컬 기록 사용", .degraded)

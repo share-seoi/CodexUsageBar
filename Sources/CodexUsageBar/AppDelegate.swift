@@ -2,6 +2,7 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let activeProviderKey = "lastActiveProvider"
+    private static let showBothKey = "showBoth"
     // Claude가 메뉴 막대에 표시 중일 때는 자주, 아닐 때는 드물게 실시간 조회한다.
     private static let claudeActivePollInterval: TimeInterval = 60
     private static let claudeBackgroundPollInterval: TimeInterval = 180
@@ -80,7 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let initialProvider = resolveActiveProvider()
         activeProvider = initialProvider
-        let menuController = StatusMenuController(activeProvider: initialProvider)
+        let menuController = StatusMenuController(
+            activeProvider: initialProvider,
+            showBoth: UserDefaults.standard.bool(forKey: Self.showBothKey)
+        )
         statusMenuController = menuController
 
         menuController.onRefresh = { [weak self] in
@@ -89,6 +93,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.onMenuOpened = { [weak self] in
             self?.coordinators.values.forEach { $0.requestLocalRefreshIfStale() }
             self?.coordinators[.claude]?.refreshLiveIfStale(maxAge: Self.claudeStaleAge)
+        }
+        menuController.onShowBothChanged = { [weak self] showBoth in
+            guard let self else { return }
+            UserDefaults.standard.set(showBoth, forKey: Self.showBothKey)
+            self.updateClaudePolling(for: self.activeProvider ?? .codex)
         }
         menuController.onQuit = {
             NSApp.terminate(nil)
@@ -121,8 +130,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateClaudePolling(for provider: UsageProvider) {
+        // "둘 다 표시"면 Claude가 늘 메뉴 막대에 있으므로 표시 중일 때와 같은 간격을 쓴다.
+        let claudeShown = provider == .claude || UserDefaults.standard.bool(forKey: Self.showBothKey)
         coordinators[.claude]?.setLivePollInterval(
-            provider == .claude ? Self.claudeActivePollInterval : Self.claudeBackgroundPollInterval
+            claudeShown ? Self.claudeActivePollInterval : Self.claudeBackgroundPollInterval
         )
     }
 

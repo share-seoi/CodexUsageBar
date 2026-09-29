@@ -17,7 +17,24 @@ struct ProviderUsageState: Equatable {
 
 final class UsageBoardModel: ObservableObject {
     @Published var activeProvider: UsageProvider
+    @Published var showBoth = false
     @Published private(set) var states: [UsageProvider: ProviderUsageState]
+
+    /// 메뉴 막대에 그릴 앱, 왼쪽부터. 자동 전환이면 앞에 띄운 앱 하나.
+    var shownProviders: [UsageProvider] {
+        Self.shownProviders(showBoth: showBoth, active: activeProvider) { self.states[$0]?.snapshot != nil }
+    }
+
+    /// "둘 다 표시"는 두 앱 모두 값을 받은 뒤에만 Codex, Claude 순으로 나란히 그린다.
+    static func shownProviders(
+        showBoth: Bool,
+        active: UsageProvider,
+        hasSnapshot: (UsageProvider) -> Bool
+    ) -> [UsageProvider] {
+        guard showBoth else { return [active] }
+        let both = UsageProvider.allCases.filter(hasSnapshot)
+        return both.count == UsageProvider.allCases.count ? both : [active]
+    }
 
     init(activeProvider: UsageProvider) {
         self.activeProvider = activeProvider
@@ -56,7 +73,7 @@ struct UsageBoardView: View {
                     ProviderCard(
                         provider: provider,
                         state: model.state(for: provider),
-                        isActive: provider == model.activeProvider,
+                        isActive: model.shownProviders.contains(provider),
                         now: context.date
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

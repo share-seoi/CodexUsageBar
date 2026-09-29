@@ -4,15 +4,25 @@ import SwiftUI
 final class StatusMenuController: NSObject, NSMenuDelegate {
     var onRefresh: (() -> Void)?
     var onMenuOpened: (() -> Void)?
+    var onShowBothChanged: ((Bool) -> Void)?
     var onQuit: (() -> Void)?
 
     private let statusItem: NSStatusItem
+    // "둘 다 표시"일 때만 만드는 두 번째 항목. 나중에 만든 항목이 왼쪽에 붙으므로 여기에 Codex를 둔다.
+    private var secondaryItem: NSStatusItem?
     private let model: UsageBoardModel
     private let boardView: NSHostingView<UsageBoardView>
+    private let showBothItem = NSMenuItem(
+        title: "Codex·Claude 둘 다 표시",
+        action: #selector(StatusMenuController.toggleShowBoth),
+        keyEquivalent: "b"
+    )
 
-    init(activeProvider: UsageProvider) {
+    init(activeProvider: UsageProvider, showBoth: Bool) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        model = UsageBoardModel(activeProvider: activeProvider)
+        let model = UsageBoardModel(activeProvider: activeProvider)
+        model.showBoth = showBoth
+        self.model = model
         boardView = NSHostingView(rootView: UsageBoardView(model: model))
         super.init()
         configureStatusItem()
@@ -33,9 +43,8 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     func render(_ snapshot: UsageSnapshot, for provider: UsageProvider) {
         model.update(provider) { $0.snapshot = snapshot }
         resizeBoard()
-        if provider == model.activeProvider {
-            updateStatusButton()
-        }
+        // A snapshot arriving for the other app can turn "둘 다 표시" from one item into two.
+        updateStatusButton()
     }
 
     func markChecked(at date: Date, for provider: UsageProvider) {
@@ -51,11 +60,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func configureStatusItem() {
-        if let button = statusItem.button {
-            button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
-            button.imagePosition = .imageLeading
-            button.imageScaling = .scaleProportionallyDown
-        }
+        configureButton(statusItem.button)
         updateStatusButton()
 
         let menu = NSMenu()
@@ -77,6 +82,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         refreshItem.isEnabled = true
         menu.addItem(refreshItem)
 
+        showBothItem.target = self
+        showBothItem.isEnabled = true
+        showBothItem.state = model.showBoth ? .on : .off
+        menu.addItem(showBothItem)
+
         let quitItem = NSMenuItem(
             title: "Codex Usage Bar 종료",
             action: #selector(quit),
@@ -89,6 +99,13 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
     }
 
+    private func configureButton(_ button: NSStatusBarButton?) {
+        guard let button else { return }
+        button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+        button.imagePosition = .imageLeading
+        button.imageScaling = .scaleProportionallyDown
+    }
+
     // 메뉴 항목 안의 SwiftUI 뷰는 내용이 바뀌어도 크기가 자동으로 맞춰지지 않아 직접 갱신한다.
     private func resizeBoard() {
         let size = boardView.fittingSize
@@ -96,8 +113,30 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func updateStatusButton() {
-        guard let button = statusItem.button else { return }
-        let provider = model.activeProvider
+        let shown = model.shownProviders
+        // 오른쪽(원래 항목)에 마지막 앱, 왼쪽(두 번째 항목)에 첫 번째 앱을 그린다.
+        show(shown[shown.count - 1], on: statusItem.button)
+        if shown.count > 1 {
+            let item = secondaryItem ?? makeSecondaryItem()
+            show(shown[0], on: item.button)
+        } else if let item = secondaryItem {
+            NSStatusBar.system.removeStatusItem(item)
+            secondaryItem = nil
+        }
+    }
+
+    private func makeSecondaryItem() -> NSStatusItem {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        configureButton(item.button)
+        // NSMenu는 한 항목에만 붙일 수 있으므로, 눌리면 원래 항목의 메뉴를 연다.
+        item.button?.target = self
+        item.button?.action = #selector(openMenu)
+        secondaryItem = item
+        return item
+    }
+
+    private func show(_ provider: UsageProvider, on button: NSStatusBarButton?) {
+        guard let button else { return }
         let name = provider.displayName
         if let snapshot = model.state(for: provider).snapshot, !snapshot.windows.isEmpty {
             button.title = snapshot.menuBarTitle
@@ -111,8 +150,19 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         }
     }
 
+    @objc private func openMenu() {
+        statusItem.button?.performClick(nil)
+    }
+
     @objc private func refreshNow() {
         onRefresh?()
+    }
+
+    @objc private func toggleShowBoth() {
+        model.showBoth.toggle()
+        showBothItem.state = model.showBoth ? .on : .off
+        updateStatusButton()
+        onShowBothChanged?(model.showBoth)
     }
 
     @objc private func quit() {

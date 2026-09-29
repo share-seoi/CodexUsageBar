@@ -7,6 +7,7 @@ enum ClaudeLiveUsageError: LocalizedError {
     case keychainFailed(OSStatus)
     case invalidCredentials
     case tokenExpired
+    case desktopFormat
     case unauthorized
     case rateLimited(until: Date)
     case http(Int)
@@ -24,7 +25,9 @@ enum ClaudeLiveUsageError: LocalizedError {
         case .invalidCredentials:
             return "Claude 로그인 정보를 읽을 수 없음"
         case .tokenExpired:
-            return "Claude 로그인 토큰 만료 (Claude Code 사용 시 자동 갱신)"
+            return "Claude 로그인 토큰 만료 (Claude 앱을 열면 자동 갱신)"
+        case .desktopFormat:
+            return "Claude 앱 로그인 정보 형식이 다름"
         case .unauthorized:
             return "Claude 사용량 조회 권한 없음"
         case .rateLimited(let until):
@@ -80,8 +83,9 @@ struct ClaudeCredentials: Equatable {
     }
 }
 
-/// Claude Code가 키체인에 저장한 로그인 토큰을 읽기만 해서, 사용량 탭과 같은 API로 5시간/주간 사용률을 조회한다.
-/// 토큰을 갱신하거나 키체인에 쓰지 않는다(갱신하면 Claude Code 쪽 로그인이 풀릴 수 있음).
+/// Claude 데스크톱 앱의 로그인 토큰(없거나 만료면 Claude Code 키체인 토큰)을 읽기만 해서,
+/// 사용량 탭과 같은 API로 5시간/주간 사용률을 조회한다.
+/// 토큰을 갱신하거나 키체인에 쓰지 않는다(갱신하면 Claude 쪽 로그인이 풀릴 수 있음).
 final class ClaudeLiveUsageFetcher: LiveUsageFetching {
     static let keychainService = "Claude Code-credentials"
     static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
@@ -208,6 +212,37 @@ final class ClaudeLiveUsageFetcher: LiveUsageFetching {
             throw ClaudeLiveUsageError.keychainDenied
         }
 
+        // 데스크톱 앱 토큰은 앱이 켜져 있는 동안 계속 갱신되므로 먼저 쓴다.
+        var desktopError: Error?
+        do {
+            if let desktop = try ClaudeDesktopToken.read() {
+                if !desktop.isExpired() {
+                    cachedCredentials = desktop
+                    return desktop
+                }
+                desktopError = ClaudeLiveUsageError.tokenExpired
+            }
+        } catch ClaudeLiveUsageError.keychainDenied {
+            keychainDenied = true
+            throw ClaudeLiveUsageError.keychainDenied
+        } catch {
+            desktopError = error
+        }
+
+        do {
+            return try claudeCodeCredentials()
+        } catch let codeError as ClaudeLiveUsageError {
+            switch codeError {
+            case .credentialsNotFound, .tokenExpired:
+                // 데스크톱 쪽 원인이 더 구체적이면 그것을 보여준다.
+                throw desktopError ?? codeError
+            default:
+                throw codeError
+            }
+        }
+    }
+
+    private func claudeCodeCredentials() throws -> ClaudeCredentials {
         let data: Data
         do {
             data = try Self.readKeychainItem()

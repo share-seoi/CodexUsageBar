@@ -3,10 +3,15 @@
 **작업표시줄에 배터리 하나. Codex·Claude 남은 사용량을 한눈에.**
 
 <p align="center">
-  <img src="docs/images/taskbar.png" alt="Windows 작업표시줄 오른쪽, 시계 옆에 표시된 Claude 5시간 100%·주간 86% 배터리 위젯" width="561">
+  <img src="docs/images/taskbar-codex.png" alt="Codex를 쓰는 중: 작업표시줄에 Codex 주간 한도 W 96% 배터리" width="555"><br>
+  <sub>Codex를 쓰는 중</sub><br><br>
+  <img src="docs/images/taskbar-claude.png" alt="Claude를 쓰는 중: 작업표시줄에 Claude 5시간 100%·주간 86% 배터리" width="561"><br>
+  <sub>Claude를 쓰는 중</sub>
 </p>
 
-지금 쓰고 있는 앱(Codex 또는 Claude)의 남은 한도를 작업표시줄에 배터리로 보여줍니다. 한도가 둘이면 `5h`·`W` 배터리가 나란히, 하나면 하나만 나옵니다.
+지금 쓰고 있는 앱의 남은 한도를 작업표시줄에 배터리로 보여줍니다. **Codex를 앞에 띄우면 Codex, Claude를 띄우면 Claude 사용량으로 자동으로 바뀌고**, 게임이나 브라우저 같은 다른 앱으로 넘어가면 마지막 표시를 그대로 둡니다.
+
+배터리마다 `5h`(5시간 한도)·`W`(주간 한도) 이름표가 붙습니다. 계정에 한도가 둘이면(Claude, Codex Plus 등) 두 개가 나란히, 주간 한도만 있으면 `W` 하나만 나옵니다.
 
 배터리를 누르면 두 계정의 한도와 초기화 시각이 함께 나옵니다. 그게 전부입니다.
 

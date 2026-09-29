@@ -1,115 +1,67 @@
 # Codex Usage Bar
 
-**Windows 작업표시줄 또는 macOS 메뉴 막대에서 Codex와 Claude의 남은 사용량을 보여주는 도구입니다.**
+**작업표시줄에 배터리 하나. Codex·Claude 남은 사용량을 한눈에.**
 
-## Windows: 다른 PC에 바로 설치
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/hero-dark.png">
+    <img src="docs/images/hero-light.png" alt="작업표시줄의 배터리 위젯과, 클릭하면 열리는 Codex·Claude 사용량 상세 창" width="720">
+  </picture>
+</p>
 
-Windows 10/11 x64에서 저장소를 받은 뒤 루트에서 실행합니다. 관리자 권한과 별도의 .NET SDK 설치는 필요하지 않습니다(.NET Framework 4.8 이상 필요).
+지금 쓰고 있는 앱(Codex 또는 Claude)의 남은 한도를 작업표시줄에 배터리로 보여줍니다. 누르면 두 계정의 한도와 초기화 시각이 함께 나옵니다. 그게 전부입니다.
+
+| Codex (주간 한도 1개) | Claude (5시간 + 주간) |
+| :---: | :---: |
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/widget-codex-dark.png"><img src="docs/images/widget-codex-light.png" alt="Codex 위젯" height="48"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/widget-claude-dark.png"><img src="docs/images/widget-claude-light.png" alt="Claude 위젯" height="48"></picture> |
+
+## 설치 (Windows 10/11)
+
+PowerShell에서:
 
 ```powershell
-git clone https://github.com/rlaehrb1/CodexUsageBar.git
+git clone https://github.com/share-seoi/CodexUsageBar.git
 cd CodexUsageBar
 powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
 ```
 
-기본 설치 위치는 `%LOCALAPPDATA%\Programs\CodexUsageBar`입니다. 설치 스크립트가 소스 빌드, 파일 복사, 실행까지 처리합니다. Codex 또는 Claude 앱을 열고 작업표시줄의 배터리 위젯을 클릭하면 두 계정의 한도를 볼 수 있습니다.
+- 관리자 권한, .NET SDK, Node, Python 모두 필요 없습니다. Windows에 기본으로 있는 .NET Framework 4.8로 소스에서 바로 빌드합니다.
+- `%LOCALAPPDATA%\Programs\CodexUsageBar`에 설치되고 바로 실행됩니다.
+- 로그인할 때 자동으로 켜지게 하려면 명령 끝에 `-AutoStart`를 붙이거나, 위젯 상세 창의 **자동 시작** 버튼을 누르세요.
+- 설치 전에 코드를 확인하고 싶다면 `.\windows\test.ps1`을 먼저 실행하세요. 네트워크 없이 합성 데이터로 동작을 검사합니다.
 
-- **Claude:** 해당 PC의 로그인 토큰으로 20초마다 사용량 API 조회.
-- **Codex:** 20초마다 로컬 기록 확인, 시작·수동 새로고침 때 계정 API 조회.
-- 자동 시작도 원하면 설치 명령에 `-AutoStart`를 추가합니다. 기본 설치는 자동 시작 설정을 변경하지 않습니다.
-- 각 PC에서 Codex/Claude에 로그인해야 합니다. 계정 토큰은 저장소에 포함되지 않습니다. 비공개 저장소를 받으려면 접근 권한이 있는 GitHub 계정으로 로그인해야 합니다.
-- 에이전트에게 설치를 맡길 때는 **[AGENTS.md](AGENTS.md)**, 상세 사용법·진단은 **[Windows 안내](windows/README.md)**를 참고하세요.
+## 사용법
+
+1. Codex 또는 Claude 데스크톱 앱에 평소처럼 로그인해 둡니다.
+2. 둘 중 하나를 열면 작업표시줄에 배터리가 나타납니다. 둘 다 닫으면 위젯도 숨습니다.
+3. 배터리를 누르면 상세 창이 열립니다: **새로고침**, **자동 시작** 켜기/끄기, **종료**.
+
+한도가 여러 개인 계정은 `5h`·`W` 이름표를 붙인 배터리가 나란히 표시되고, 남은 양이 적으면 빨갛게 바뀝니다.
+
+## 어떻게 읽어 오나요
+
+- **Codex:** 로컬 세션 기록을 20초마다 확인하고, 시작·새로고침 때 Codex 앱 서버로 계정 한도를 한 번 조회합니다.
+- **Claude:** 이 PC에 저장된 Claude 로그인 토큰을 **읽기만** 해서 20초마다 사용량 API를 조회합니다. 모델 추론은 요청하지 않습니다.
+- 토큰을 복사·수정·전송하지 않으며, 저장소에도 계정 정보는 들어 있지 않습니다. 설치하는 사람의 PC에 로그인된 계정이 표시됩니다.
+
+자세한 동작과 진단 옵션은 [Windows 안내](windows/README.md)를 참고하세요.
+
+## 제거
+
+1. 자동 시작을 켰다면 위젯 상세 창에서 먼저 끕니다.
+2. 상세 창에서 **종료**를 누릅니다.
+3. `%LOCALAPPDATA%\Programs\CodexUsageBar`(프로그램)와 `%LOCALAPPDATA%\CodexUsageBar`(마지막 사용량 캐시) 폴더를 지웁니다.
 
 ## macOS
 
-아래는 macOS AppKit 버전의 동작 및 설치 안내입니다.
+메뉴 막대 버전도 있습니다. 빌드와 설치는 [macOS 안내](docs/macos.md)를 보세요.
 
-- 지금 앞에 있는 앱이 Codex면 Codex 사용량, Claude면 Claude 사용량을 표시합니다.
-- 다른 앱으로 전환하면 마지막으로 사용한 쪽(Codex 또는 Claude)을 계속 표시합니다.
-- 메뉴를 열면 두 앱의 한도를 모두 볼 수 있고, 현재 메뉴 막대에 표시 중인 쪽에 체크가 붙습니다.
+## 참고
 
-## 동작 방식 (Codex)
+- 개인이 만든 비공식 도구이며 OpenAI, Anthropic과 관계가 없습니다.
+- 사용량 조회에 쓰는 API는 공개적으로 보장된 API가 아니어서, 앱이 업데이트되면 동작이 바뀔 수 있습니다.
+- 에이전트(Codex, Claude Code 등)에게 설치를 맡길 때는 [AGENTS.md](AGENTS.md)를 읽게 하면 됩니다.
 
-- Codex가 로컬 세션에 이미 기록한 최신 rate-limit 스냅샷을 사용합니다.
-- 로그인 토큰이나 `~/.codex/auth.json`을 직접 읽지 않습니다.
-- 평소에는 20초마다 최근 세션 파일의 끝부분만 짧게 확인하며 별도 프로세스나 네트워크 요청을 만들지 않습니다.
-- 앱 시작과 **지금 새로고침**에서는 Codex App Server로 계정 rate-limit을 1회 조회하고 즉시 프로세스를 종료합니다.
-- 한도가 하나면 메뉴 막대에 그 퍼센트만, 여러 개면 `5h 63% · W 88%`처럼 **각각** 표시합니다. Windows 위젯도 한도마다 `5h`/`W` 이름을 붙인 배터리를 나란히 그립니다.
-- 메뉴를 열면 5시간/주간 한도와 초기화 시각을 각각 확인할 수 있습니다.
-- Dock 아이콘이나 일반 창을 만들지 않습니다.
-- Codex 앱(`com.openai.codex`) 또는 Claude 앱(`com.anthropic.claudefordesktop`)이 실행 중일 때만 메뉴 막대 앱이 켜지고, 둘 다 종료되면 함께 종료됩니다.
-- 두 앱이 모두 꺼져 있을 때는 `launchd`의 파일 변경 조건만 등록되어 있으며 감시 프로세스는 상주하지 않습니다.
+## 라이선스
 
-Codex를 이 Mac에서 사용하면 각 응답 뒤에 값이 갱신되어 최대 20초 안에 메뉴 막대에 반영됩니다.
-다른 기기나 Codex 화면과 값이 다를 때는 **지금 새로고침**을 누르면 실시간 계정 값을 다시 읽습니다.
-
-## 동작 방식 (Claude)
-
-- Claude 데스크톱 앱의 로그인 토큰(`config.json`의 `oauth:tokenCacheV2`, 키체인 `Claude Safe Storage`로 복호화)을 **읽기만** 해서, Claude 앱의 사용량 탭과 같은 API(`api.anthropic.com/api/oauth/usage`)로 5시간/주간 사용률과 초기화 시각을 조회합니다. 데스크톱 앱이 켜져 있는 동안 토큰을 갱신하므로 따로 로그인할 필요가 없습니다.
-- 데스크톱 토큰이 없거나 만료됐으면 Claude Code가 키체인(`Claude Code-credentials`)에 저장한 토큰을 대신 씁니다.
-- Claude가 메뉴 막대에 표시 중이면 1분마다, 아니면 3분마다 조회합니다. Claude 앱으로 전환하거나 메뉴를 열 때 마지막 조회가 20초보다 오래됐으면 바로 다시 조회합니다.
-- 토큰을 갱신하거나 키체인에 쓰지 않습니다. 두 토큰이 모두 만료됐으면 Claude가 새로 받을 때까지 아래의 로컬 기록을 대신 사용합니다.
-- 조회 제한(HTTP 429)을 받으면 2분부터 최대 15분까지 간격을 늘려 다시 시도합니다.
-- 처음 실행하면 macOS가 키체인 접근을 묻습니다(`Claude Safe Storage`, 필요하면 `Claude Code-credentials`). **항상 허용**을 누르면 이후에는 묻지 않습니다. 앱을 다시 빌드하면 서명이 바뀌어 한 번 더 물을 수 있습니다. 거부하면 **지금 새로고침**을 누를 때만 다시 요청합니다.
-- 실시간 조회를 쓸 수 없을 때는 Claude 데스크톱 앱이 기록하는 `~/Library/Application Support/Claude/plan-usage-history.json`(약 10~15분 간격)을 사용합니다.
-
-## 코드 구조
-
-- `AppDelegate`: 앱 생명주기, 표시할 앱 선택, 각 모듈 연결을 담당합니다.
-- `UsageCoordinator`: 로컬/실시간 값의 우선순위, 캐시, 새로고침 상태를 관리합니다.
-- `StatusMenuController`: 메뉴 막대 UI 생성과 표시만 담당합니다. 앱별 메뉴 구역을 따로 둡니다.
-- `UsageMonitor` / `LocalUsageStore`: 20초 로컬 기록 추적과 최신 스냅샷 탐색을 담당합니다.
-- `ClaudeLiveUsageFetcher`: 키체인 토큰으로 Claude 사용량 API를 조회합니다.
-- `ClaudeUsageStore`: 실시간 조회가 안 될 때 Claude 앱의 사용량 기록 파일에서 최신 값을 읽습니다.
-- `LiveUsageFetcher`: 사용자가 요청한 Codex 실시간 계정 조회를 한 번 실행합니다.
-- `AppLifecycle` / `ProviderIconLoader`: Codex·Claude 실행/활성화 감지와 아이콘 로딩을 각각 담당합니다.
-
-## 빌드
-
-Codex 또는 ChatGPT macOS 앱이 `/Applications`에 설치된 상태에서:
-
-```bash
-./scripts/build-app.sh
-./scripts/install-lifecycle.sh
-```
-
-생성 위치: `dist/Codex Usage Bar.app`
-
-설치 위치: `~/Applications/Codex Usage Bar.app`
-
-설치 스크립트는 `~/Library/LaunchAgents/local.mackim.CodexUsageBar.lifecycle.plist`를 등록합니다. 로그인할 때 한 번 상태를 확인하고, 이후 Codex의 `SingletonLock` 생성/삭제와 Claude 앱 지원 폴더 변경을 시작 조건으로 사용합니다.
-
-### 코드 서명
-
-`build-app.sh`는 로그인 키체인에 `CodexUsageBar Local Code Signing` 인증서가 있으면 그것으로 서명합니다. 서명이 빌드마다 바뀌지 않으므로 Claude 키체인 항목의 **항상 허용**이 다시 빌드해도 유지됩니다. 인증서가 없으면 임시 서명을 사용하고, 이 경우 빌드할 때마다 키체인 허용을 다시 묻습니다. 다른 인증서를 쓰려면 `CODESIGN_IDENTITY` 환경 변수로 이름을 지정합니다.
-
-인증서는 이 Mac에서만 쓰는 자체 서명(10년 유효, 코드 서명 전용)이며, 시스템 신뢰 설정은 바꾸지 않았습니다. 새 Mac에서 다시 만들려면:
-
-```bash
-openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 3650 \
-  -subj "/CN=CodexUsageBar Local Code Signing" \
-  -addext "basicConstraints=critical,CA:false" \
-  -addext "keyUsage=critical,digitalSignature" \
-  -addext "extendedKeyUsage=critical,codeSigning"
-openssl pkcs12 -export -legacy -inkey key.pem -in cert.pem \
-  -name "CodexUsageBar Local Code Signing" -out id.p12 -passout pass:temp
-security import id.p12 -k ~/Library/Keychains/login.keychain-db -P temp -T /usr/bin/codesign
-rm -P key.pem id.p12 cert.pem
-```
-
-자동 실행 조건만 제거하려면:
-
-```bash
-./scripts/uninstall-lifecycle.sh
-```
-
-## 진단
-
-메뉴 UI 없이 현재 값을 한 번 확인할 수 있습니다.
-
-```bash
-.build/release/CodexUsageBar --print-usage
-.build/release/CodexUsageBar --print-live-usage
-.build/release/CodexUsageBar --print-claude-usage
-.build/release/CodexUsageBar --print-claude-live-usage
-```
+[MIT](LICENSE)

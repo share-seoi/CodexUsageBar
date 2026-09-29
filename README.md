@@ -34,7 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
 - 로그인 토큰이나 `~/.codex/auth.json`을 직접 읽지 않습니다.
 - 평소에는 20초마다 최근 세션 파일의 끝부분만 짧게 확인하며 별도 프로세스나 네트워크 요청을 만들지 않습니다.
 - 앱 시작과 **지금 새로고침**에서는 Codex App Server로 계정 rate-limit을 1회 조회하고 즉시 프로세스를 종료합니다.
-- 메뉴 막대의 퍼센트는 현재 한도들 중 **가장 적게 남은 값**입니다.
+- 한도가 하나면 메뉴 막대에 그 퍼센트만, 여러 개면 `5h 63% · W 88%`처럼 **각각** 표시합니다. Windows 위젯도 한도마다 `5h`/`W` 이름을 붙인 배터리를 나란히 그립니다.
 - 메뉴를 열면 5시간/주간 한도와 초기화 시각을 각각 확인할 수 있습니다.
 - Dock 아이콘이나 일반 창을 만들지 않습니다.
 - Codex 앱(`com.openai.codex`) 또는 Claude 앱(`com.anthropic.claudefordesktop`)이 실행 중일 때만 메뉴 막대 앱이 켜지고, 둘 다 종료되면 함께 종료됩니다.

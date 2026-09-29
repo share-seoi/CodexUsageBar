@@ -9,6 +9,23 @@ struct UsageWindow: Codable, Equatable {
     var remainingPercent: Int {
         max(0, min(100, 100 - usedPercent))
     }
+
+    /// 메뉴 막대에 쓰는 짧은 이름 (5시간 → "5h", 주간 → "W").
+    var shortLabel: String {
+        guard let minutes = windowDurationMinutes, minutes > 0 else {
+            return label
+        }
+        if minutes % 10_080 == 0 {
+            return minutes == 10_080 ? "W" : "\(minutes / 10_080)W"
+        }
+        if minutes % 1_440 == 0 {
+            return "\(minutes / 1_440)d"
+        }
+        if minutes % 60 == 0 {
+            return "\(minutes / 60)h"
+        }
+        return "\(minutes)m"
+    }
 }
 
 struct UsageSnapshot: Codable, Equatable {
@@ -18,6 +35,22 @@ struct UsageSnapshot: Codable, Equatable {
 
     var overallRemainingPercent: Int {
         windows.map(\.remainingPercent).min() ?? 0
+    }
+
+    /// 한도가 하나면 "88%", 여러 개면 "5h 63% · W 88%"처럼 각각 보여준다.
+    var menuBarTitle: String {
+        guard windows.count > 1 else {
+            return "\(overallRemainingPercent)%"
+        }
+        return windows
+            .map { "\($0.shortLabel) \($0.remainingPercent)%" }
+            .joined(separator: " · ")
+    }
+
+    var menuBarToolTip: String {
+        windows
+            .map { "\($0.label) \($0.remainingPercent)% 남음" }
+            .joined(separator: ", ")
     }
 
     func adjustedForCurrentTime(_ now: Date = Date()) -> UsageSnapshot {

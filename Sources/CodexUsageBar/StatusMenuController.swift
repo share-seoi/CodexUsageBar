@@ -99,9 +99,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         guard let button = statusItem.button else { return }
         let provider = model.activeProvider
         let name = provider.displayName
-        if let remaining = model.state(for: provider).snapshot?.overallRemainingPercent {
-            button.title = "\(remaining)%"
-            button.toolTip = "\(name) \(remaining)% 남음"
+        if let snapshot = model.state(for: provider).snapshot, !snapshot.windows.isEmpty {
+            button.title = snapshot.menuBarTitle
+            button.toolTip = "\(name) \(snapshot.menuBarToolTip)"
         } else {
             button.title = "--%"
             button.toolTip = "\(name) 남은 사용량 확인 중"

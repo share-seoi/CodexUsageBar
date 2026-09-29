@@ -11,9 +11,10 @@ struct UsageWindow: Codable, Equatable {
     }
 
     /// 메뉴 막대에 쓰는 짧은 이름 (5시간 → "5h", 주간 → "W").
-    var shortLabel: String {
+    /// 한도 길이를 모르면("개인 한도" 등) 메뉴 막대에 넣기엔 길어서 nil.
+    var shortLabel: String? {
         guard let minutes = windowDurationMinutes, minutes > 0 else {
-            return label
+            return nil
         }
         if minutes % 10_080 == 0 {
             return minutes == 10_080 ? "W" : "\(minutes / 10_080)W"
@@ -37,13 +38,13 @@ struct UsageSnapshot: Codable, Equatable {
         windows.map(\.remainingPercent).min() ?? 0
     }
 
-    /// 한도가 하나면 "88%", 여러 개면 "5h 63% · W 88%"처럼 각각 보여준다.
+    /// 한도마다 이름표를 붙여 보여준다: 주간만 있으면 "W 88%", 둘이면 "5h 63% · W 88%".
     var menuBarTitle: String {
-        guard windows.count > 1 else {
-            return "\(overallRemainingPercent)%"
-        }
-        return windows
-            .map { "\($0.shortLabel) \($0.remainingPercent)%" }
+        windows
+            .map { window in
+                let percent = "\(window.remainingPercent)%"
+                return window.shortLabel.map { "\($0) \(percent)" } ?? percent
+            }
             .joined(separator: " · ")
     }
 

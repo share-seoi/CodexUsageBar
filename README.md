@@ -52,7 +52,7 @@ cd CodexUsageBar
 
 - Swift로 빌드하므로 Xcode 명령행 도구가 필요합니다. 없으면 `xcode-select --install`로 설치하세요.
 - `~/Applications/Codex Usage Bar.app`에 설치됩니다. Codex나 Claude 앱을 열면 자동으로 켜지고, 둘 다 닫으면 꺼집니다.
-- Mac에서는 작업표시줄 대신 **메뉴 막대**에 `5h 63% · W 88%`처럼 표시됩니다.
+- Mac에서는 작업표시줄 대신 **메뉴 막대**에 같은 이름표로 표시됩니다: 한도가 둘이면 `5h 63% · W 88%`, 주간만 있으면 `W 88%`.
 - 처음 실행하면 macOS가 Claude 로그인 정보가 든 키체인 접근을 묻습니다. **항상 허용**을 누르면 다시 묻지 않습니다. 코드 서명, 진단 옵션 등 자세한 내용은 [macOS 안내](docs/macos.md)를 보세요.
 
 ## 사용법

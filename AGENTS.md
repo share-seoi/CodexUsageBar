@@ -11,8 +11,8 @@
    powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
    ```
 
-3. 기본 설치 위치는 `%LOCALAPPDATA%\Programs\CodexUsageBar\CodexUsageBar.exe`입니다. 설치 스크립트가 소스를 빌드하고 실행 파일·설정 파일만 복사한 뒤 실행합니다. 설치 후에는 저장소를 옮겨도 됩니다.
-4. 사용자가 로그인 시 자동 실행도 요청했다면 같은 명령에 `-AutoStart`를 붙입니다. 단순 설치만으로 자동 시작을 켜지 않습니다. 실행하지 않고 설치하려면 `-NoStart`, 경로를 지정하려면 `-InstallDirectory 'C:\원하는\폴더'`를 사용합니다.
+3. 기본 설치 위치는 `%LOCALAPPDATA%\Programs\CCusagebar\CCusagebar.exe`입니다. 설치 스크립트가 소스를 빌드하고 실행 파일·설정 파일만 복사한 뒤 실행합니다. 설치 후에는 저장소를 옮겨도 됩니다.
+4. 사용자가 로그인 시 자동 실행도 요청했다면 같은 명령에 `-AutoStart`를 붙입니다. 바탕화면 켜기/끄기 바로가기를 원하면 `-DesktopShortcut`을 붙입니다. 단순 설치만으로 자동 시작을 켜지 않습니다. 실행하지 않고 설치하려면 `-NoStart`, 경로를 지정하려면 `-InstallDirectory 'C:\원하는\폴더'`를 사용합니다.
 5. Codex 또는 Claude 데스크톱 앱이 실행 중이면 작업표시줄에 위젯이 표시됩니다. 둘 다 꺼져 있으면 위젯을 숨기고 앱 실행을 기다리므로, 프로세스가 살아 있다는 이유만으로 표시가 확인됐다고 말하지 않습니다. 상세 창에서 연결 상태와 데이터 시각을 확인합니다.
 6. 다른 폴더의 위젯이 이미 실행 중이면 설치 스크립트는 그 프로세스를 종료하지 않습니다. 해당 위젯의 상세 창에서 종료한 뒤 설치된 실행 파일을 실행합니다. Codex나 Claude 프로세스를 종료하지 않습니다.
 

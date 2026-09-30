@@ -42,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\windows\install.ps1
 ```
 
 - 관리자 권한, .NET SDK, Node, Python 모두 필요 없습니다. Windows에 기본으로 있는 .NET Framework 4.8로 소스에서 바로 빌드합니다.
-- `%LOCALAPPDATA%\Programs\CodexUsageBar`에 설치되고 바로 실행됩니다.
+- `%LOCALAPPDATA%\Programs\CCusagebar`에 `CCusagebar.exe`로 설치되고 바로 실행됩니다. 바탕화면 켜기/끄기 바로가기가 필요하면 `-DesktopShortcut`을 붙이세요.
 - 로그인할 때 자동으로 켜지게 하려면 명령 끝에 `-AutoStart`를 붙이거나, 위젯 상세 창의 **자동 시작** 버튼을 누르세요.
 - 설치 전에 코드를 확인하고 싶다면 `.\windows\test.ps1`을 먼저 실행하세요. 네트워크 없이 합성 데이터로 동작을 검사합니다.
 
@@ -86,7 +86,7 @@ cd CodexUsageBar
 
 1. 자동 시작을 켰다면 위젯 상세 창에서 먼저 끕니다.
 2. 상세 창에서 **종료**를 누릅니다.
-3. `%LOCALAPPDATA%\Programs\CodexUsageBar`(프로그램)와 `%LOCALAPPDATA%\CodexUsageBar`(마지막 사용량 캐시) 폴더를 지웁니다.
+3. `%LOCALAPPDATA%\Programs\CCusagebar`(프로그램)와 `%LOCALAPPDATA%\CCusagebar`(마지막 사용량 캐시·기록) 폴더를 지웁니다.
 
 **macOS**
 

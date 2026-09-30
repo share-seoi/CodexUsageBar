@@ -1,12 +1,13 @@
 #!/bin/zsh
 set -euo pipefail
 
-PLIST_NAME="local.mackim.CodexUsageBar.lifecycle.plist"
-TARGET_PLIST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 USER_ID="$(/usr/bin/id -u)"
-SERVICE_TARGET="gui/$USER_ID/local.mackim.CodexUsageBar.lifecycle"
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 
-/bin/launchctl bootout "$SERVICE_TARGET" 2>/dev/null || true
-/bin/rm -f "$TARGET_PLIST"
+# 새 이름과 예전 이름(Codex Usage Bar)의 자동 실행 조건을 모두 제거한다.
+for LABEL in local.mackim.CCusagebar.lifecycle local.mackim.CodexUsageBar.lifecycle; do
+    /bin/launchctl bootout "gui/$USER_ID/$LABEL" 2>/dev/null || true
+    /bin/rm -f "$LAUNCH_AGENTS_DIR/$LABEL.plist"
+done
 
-echo "Codex Usage Bar 자동 실행 조건을 제거했습니다."
+echo "CCusagebar 자동 실행 조건을 제거했습니다."

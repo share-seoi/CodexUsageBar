@@ -3,21 +3,21 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Codex Usage Bar</string>
+    <string>CCusagebar</string>
     <key>CFBundleExecutable</key>
-    <string>CodexUsageBar</string>
+    <string>CCusagebar</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon.icns</string>
     <key>CFBundleIdentifier</key>
-    <string>local.mackim.CodexUsageBar</string>
+    <string>local.mackim.CCusagebar</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>CodexUsageBar</string>
+    <string>CCusagebar</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>

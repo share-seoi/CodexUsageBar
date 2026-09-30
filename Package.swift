@@ -3,25 +3,25 @@
 import PackageDescription
 
 let package = Package(
-    name: "CodexUsageBar",
+    name: "CCusagebar",
     platforms: [
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "CodexUsageBar", targets: ["CodexUsageBar"])
+        .executable(name: "CCusagebar", targets: ["CCusagebar"])
     ],
     targets: [
         .executableTarget(
-            name: "CodexUsageBar",
-            path: "Sources/CodexUsageBar",
+            name: "CCusagebar",
+            path: "Sources/CCusagebar",
             linkerSettings: [
                 .linkedLibrary("sqlite3")
             ]
         ),
         .testTarget(
-            name: "CodexUsageBarTests",
-            dependencies: ["CodexUsageBar"],
-            path: "Tests/CodexUsageBarTests"
+            name: "CCusagebarTests",
+            dependencies: ["CCusagebar"],
+            path: "Tests/CCusagebarTests"
         )
     ]
 )
